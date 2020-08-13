@@ -1,964 +1,1054 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1671\cocoasubrtf600
-{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww10800\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+#
+library(ggplot2)
+library(ggpubr) 
+library(shiny)
 
-\f0\fs24 \cf0 library(ggplot2)\
-library(ggpubr) #For plotting multiple figures in the same windown\
-library(shiny)\
-\
-\
-\
-core<-function(e_int, c_int, app, test, testC, testF, testSens, testSpec, randSample=0.05)\
-\{\
-    ts1<<-ts0\
-    tp<<-tp0\
-    \
-    state<<-matrix(0,nrow=91,ncol=2)\
-    state[1,]<<-c(1,0)\
-    colnames(state)<<-c("open", "close")\
-    \
-    stateMaj<<-matrix(0,nrow=91,ncol=2)\
-    stateMaj[1,]<<-c(1,0)\
-    colnames(stateMaj)<<-c("Major event free", "Major event")\
-    \
-    cost<<-rep(0,90)\
-    \
-    valOnsite<<-rep(0,90)\
-    \
-    qalyLoss<<-rep(0,90)\
-    \
-    ex1<<-rep(0,90)\
-    \
-    death<<-rep(0,90)\
-    \
-    S<<-matrix(0,nrow=90, ncol=2)\
-    colnames(S)<<-c("Student","Staff")\
-    A<<-matrix(0,nrow=90, ncol=2)\
-    colnames(A)<<-c("Student","Staff")\
-    S2<<-matrix(0,nrow=90, ncol=2) \
-    colnames(S2)<<-c("Student","Staff")\
-    A2<<-matrix(0,nrow=90, ncol=2) \
-    colnames(A2)<<-c("Student","Staff")\
-    ps<<-matrix(0,nrow=90,ncol=2) \
-    colnames(ps)<<-c("Symptomatic","Asymptomatic")\
-    pe<<-matrix(0,nrow=90,ncol=2) \
-    colnames(pe)<<-c("Symptomatic","Asymptomatic")\
-    Sus<<-matrix(0,nrow=90, ncol=2)  \
-    colnames(Sus)<<-c("Student","Staff")\
-    \
-    D1<<-matrix(0,nrow=90, ncol=2) \
-    colnames(D1)<<-c("Student","Staff") \
-    \
-    D2<<-matrix(0,nrow=90, ncol=2) \
-    colnames(D1)<<-c("Student","Staff") \
-    \
-    SInit<<-cbind(c(rep(infInit_s*ls1, rs), rep(0, 90-rs)), c(rep(infInit_e*ls1, rs), rep(0, 90-rs))) \
-    colnames(SInit)<<-c("Student","Staff")\
-    AInit<<-cbind(c(rep(infInit_s*(1-ls1), (rs+ra)), rep(0, 90-rs-ra)), c(rep(infInit_e*(1-ls1), (rs+ra)), rep(0, 90-rs-ra))) \
-    colnames(AInit)<<-c("Student","Staff")\
-    \
-    p0so<<-rep(0,90)\
-    p0sc<<-rep(0,90)\
-    p0eo<<-rep(0,90)\
-    p0ec<<-rep(0,90)\
-    \
-    testDay<<-1\
-    if (test==1)\
-    \{\
-        j<<-1\
-        while (j<=testF)\
-        \{\
-            testDay<<-c(testDay, floor(90/(testF+1))*j)\
-            j<<-j+1\
-        \}\
-    \}\
-    \
-    for (d in 1:90)\
-    \{\
-        \
-        D1[d,1]<<-0 + (d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), 1]*complianceSympS+\
-            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), 1] + (d==(rs+1))*infInit_s*ls1\
-        \
-        D1[d,2]<<-0 + (d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), 2]*complianceSympS+\
-            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), 2] + (d==(rs+1))*infInit_e*ls1\
-        \
-        D2[d,1]<<-0\
-        D2[d,2]<<-0\
-        \
-        S[max((d-ri-rs),1), ]<<-(d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), ]*(1-complianceSympS)+\
-            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), ]*(1-1)+\
-            (d<=(ri+rs))*S[max((d-ri-rs),1), ]\
-\
-        \
-        if (test==1)\
-        \{\
-            if (d==1)\
-            \{\
-                D1[d, 1]<<-0+ (SInit[d, 1]+AInit[d, 1])*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*testSens)\
-                D1[d, 2]<<-0+ (SInit[d, 2]+AInit[d, 2])*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2]*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2]*testSens)\
-                \
-                D2[d,1]<<-(Ns-sum(S2[1:max((d-1),1), 1])-sum(A2[1:max((d-1),1), 1])-infInit_s)*(1-testSpec)\
-                D2[d,2]<<-(Ne-sum(S2[1:max((d-1),1), 2])-sum(A2[1:max((d-1),1), 2])-infInit_e)*(1-testSpec)\
-                \
-                #Update prevalence\
-                SInit<<-SInit*(1-testSens)\
-                AInit<<-AInit*(1-testSens)\
-                \
-                S[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+(d<=ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]\
-                A[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+ (d<=ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]\
-                \
-            \} else if (d>1 & (d%%90)%in%testDay)\
-            \{\
-                D1[d, 1]<<-0+ (SInit[d, 1]+AInit[d, 1])*dormProp*testSens + (SInit[d, 1]+AInit[d, 1])*(1-dormProp)*randSample*testSens +\
-                    (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*dormProp*testSens) + \
-                    (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*(1-dormProp)*randSample*testSens) +\
-                    (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*dormProp*testSens) +\
-                    (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*(1-dormProp)*randSample*testSens)\
-                D1[d, 2]<<-0+ (SInit[d, 2]+AInit[d, 2])*randSample*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2]*randSample*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2]*randSample*testSens)\
-                \
-                \
-                D2[d,1]<<-(Ns-(SInit[d, 1]+AInit[d, 1]+(d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1])+(d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1])))*dormProp*(1-testSpec)+\
-                    (Ns-(SInit[d, 1]+AInit[d, 1]+(d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1])+(d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1])))*(1-dormProp)*randSample*(1-testSpec)\
-                \
-                D2[d,2]<<-(Ne-(SInit[d, 2]+AInit[d, 2]+(d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2])+(d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2])))*randSample*(1-testSpec)\
-                \
-                SInit[,1]<<-SInit[,1]*dormProp*(1-testSens) + SInit[,1]*(1-dormProp)*(1-randSample*testSens)\
-                SInit[,2]<<-SInit[,2]*(1-randSample*testSens) \
-                AInit[,1]<<-AInit[,1]*dormProp*(1-testSens) + AInit[,1]*(1-dormProp)*(1-randSample*testSens)\
-                AInit[,2]<<-AInit[,2]*(1-randSample*testSens) \
-                \
-                S[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+(d<=ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]\
-                A[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+ (d<=ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]\
-            \}\
-        \}\
-        \
-        goS<<-(Ns-sum(D1[max(1,d-14): max(1,d), 1])-sum(D2[max(1,d-14): max(1,d), 1])) \
-        goE<<-(Ne-sum(D1[max(1,d-14): max(1,d), 2])-sum(D2[max(1,d-14): max(1,d), 2])) \
-        activeCaseSympS<<-(SInit[d, 1] + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1])) \
-        activeCaseAsympS<<-(AInit[d, 1] + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1])) \
-        activeCaseSympE<<-(SInit[d, 2] + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2])) \
-        activeCaseAsympE<<-(AInit[d, 2] + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2])) \
-        \
-        ps[d,1]<<-activeCaseSympS/goS\
-        ps[d,2]<<-activeCaseAsympS/goS\
-        pe[d,1]<<-activeCaseSympE/goE\
-        pe[d,2]<<-activeCaseAsympE/goE\
-        \
-        Sus[d, 1]<<-Ns-is1-sum(S2[1:max((d-1),1), 1])-sum(A2[1:max((d-1),1), 1])-infInit_s-D1[d,1]-D2[d,1]\
-        Sus[d, 2]<<-Ne-ie-sum(S2[1:max((d-1),1), 2])-sum(A2[1:max((d-1),1), 2])-infInit_e-D1[d,2]-D2[d,2]\
-        \
-        #**************For students**************************\
-        p0so[d]<<-1-(1-complianceO*e_rd_o)*(1-(1-pc*tc)^cso)\
-        p0sc[d]<<-(1-ps[d,1]*ts1-ps[d,2]*ts1*0.55)^(css)*\
-            (1-pe[d,1]*ts1-pe[d,2]*ts1*0.55)^(cse)\
-        oddsS<<-(1-p0sc[d])/p0sc[d]\
-        oddsS<<-oddsS*e_int\
-        p0sc[d]<<-1-oddsS/(1+oddsS)\
-        \
-\
-        S[d, 1]<<-(1-p0so[d]*p0sc[d])*Sus[d,1]*ls1 \
-        \
-        A[d, 1]<<-(1-p0so[d]*p0sc[d])*Sus[d,1]*(1-ls1) \
-        \
-        #**************For employees**************************\
-        p0eo[d]<<-1-(1-complianceO*e_rd_o)*(1-(1-pc*tc)^ceo)\
-        p0ec[d]<<-(1-ps[d,1]*ts1-ps[d,2]*ts1*0.55)^(ces)*\
-            (1-pe[d,1]*ts1-pe[d,2]*ts1*0.55)^(cee)\
-        oddsE<<-(1-p0ec[d])/p0ec[d]\
-        oddsE<<-oddsE*e_int\
-        p0ec[d]<<-1-oddsE/(1+oddsE)\
-        \
-\
-        S[d, 2]<<-(1-p0eo[d]*p0ec[d])*Sus[d,2]*ls1 \
-        \
-        A[d, 2]<<-(1-p0eo[d]*p0ec[d])*Sus[d,2]*(1-ls1) \
-        \
-        S2[d,]<<-S[d,]\
-        A2[d,]<<-A[d,]\
-        \
-        \
-        \
-        #**************Building transition probabilities for campus open vs. close**************************\
-        state[(d+1),]<<-state[d,]%*%tp\
-        stateMaj[(d+1),]<<-stateMaj[d,]%*%tpMaj\
-        \
-        if (sum(S2[1:d, 1]+ A2[1:d, 1]+ S2[1:d, 2]+ A2[1:d, 2])>50) \
-        \{\
-            tp<<-matrix(c(0,1,0,1), nrow=2, ncol=2, byrow=T)\
-            state[(d+1),]<<-state[d,]%*%tp\
-            ts1<<-0\
-            test<<-0\
-        \}\
-        \
-        cost[d]<<-(1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*(1-pHospS-pDeadS)*(cMed+cIndir)+\
-            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*(1-pHospE-pDeadE)*(cMed+cIndir)+\
-            (1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*pHospS*(cMed+cDirHosp+cIndirHosp)+\
-            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*pHospE*(cMed+cDirHosp+cIndirHosp)+\
-            (1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS*(cFuneral+cIndirDeadS)+\
-            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE*(cFuneral+cIndirDeadE)+\
-            (1-stateMaj[d,1])*pmaj*n_major*(1-pHospS-pDeadS)*(cMed+cIndir)+\
-            (1-stateMaj[d,1])*pmaj*n_major*pHospS*(cMed+cDirHosp+cIndirHosp)+\
-            (1-stateMaj[d,1])*pmaj*n_major*pDeadS*(cFuneral+cIndirDeadS)+\
-            c_int/90 + \
-            test*(d==1)*state[d,1]*testC*(Ns+Ne) +\
-            test*(d>1 & (d%%90)%in%testDay)*state[d,1]*testC*(Ns*dormProp+Ns*(1-dormProp)*randSample) + \
-            test*(d>1 & (d%%90)%in%testDay)*state[d,1]*testC*Ne*randSample + \
-            state[d,1]*D2[d,2]*valueStaff*14  \
-\
-        valOnsite[d]<<-state[d,1]*value*(Ns-sum(D2[max(1,d-14): max(1,d), 1]))\
-        \
-        \
-        ex1[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pHospS+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pHospE+\
-            stateMaj[d,1]*pmaj*n_major*pHospS\
-        \
-        death[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE+\
-            stateMaj[d,1]*pmaj*n_major*pDeadS\
-        \
-        qalyLoss[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*(1-pHospS-pDeadS)*qLossCovidS*2/52+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*(1-pHospE-pDeadE)*qLossCovidE*2/52+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pHospS*qLossHosp*3/52+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pHospE*qLossHosp*3/52+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS*qLossDeadS+\
-            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE*qLossDeadE+\
-            stateMaj[d,1]*pmaj*n_major*(1-pHospS-pDeadS)*qLossCovidS*2/52+\
-            stateMaj[d,1]*pmaj*n_major*pHospS*qLossHosp*2/52+\
-            stateMaj[d,1]*pmaj*n_major*pDeadS*qLossDeadS\
-    \} \
-\} \
-\
-\
-\
-\
-\
-\
-\
-\
-\
-runOutput<-function(n=1000, pcFactor=1)\
-\{\
-    dayP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(dayP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    exP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(exP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    deathP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(deathP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    qalyLossP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(qalyLossP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    costP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(costP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    valOnsiteP<<-matrix(0,nrow=n,ncol=7)\
-    colnames(valOnsiteP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffDay<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffDay)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffEx<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffEx)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffDeath<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffDeath)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffQalyLoss<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffQalyLoss)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffCost<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffCost)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    diffValOnsite<<-matrix(0,nrow=n,ncol=7)\
-    colnames(diffValOnsite)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")\
-    \
-    for (i in 1:n)\
-    \{\
-        #No guide\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=1, c_int=0, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) \
-        dayP[i,1]<<-sum(state[,1])\
-        exP[i,1]<<-sum(ex1)\
-        deathP[i,1]<<-sum(death)\
-        costP[i,1]<<-sum(cost)\
-        valOnsiteP[i,1]<<-sum(valOnsite)\
-        qalyLossP[i,1]<<-sum(qalyLoss)\
-        \
-        #CDC\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=e_cdc, c_int=c_cdc, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) \
-        dayP[i,2]<<-sum(state[,1])\
-        exP[i,2]<<-sum(ex1)\
-        deathP[i,2]<<-sum(death)\
-        costP[i,2]<<-sum(cost)\
-        valOnsiteP[i,2]<<-sum(valOnsite)\
-        qalyLossP[i,2]<<-sum(qalyLoss)\
-        \
-        #CDC+app\
-        complianceSympS<<-min((complianceSympS0+0.1), 1)\
-        core(e_int=e_cdcApp, c_int=c_cdcApp, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) \
-        dayP[i,3]<<-sum(state[,1])\
-        exP[i,3]<<-sum(ex1)\
-        deathP[i,3]<<-sum(death)\
-        costP[i,3]<<-sum(cost)\
-        valOnsiteP[i,3]<<-sum(valOnsite)\
-        qalyLossP[i,3]<<-sum(qalyLoss)\
-        \
-        #CDC+N95\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=e_cdcAppN95, c_int=c_cdcAppN95, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) \
-        dayP[i,4]<<-sum(state[,1])\
-        exP[i,4]<<-sum(ex1)\
-        deathP[i,4]<<-sum(death)\
-        costP[i,4]<<-sum(cost)\
-        valOnsiteP[i,4]<<-sum(valOnsite)\
-        qalyLossP[i,4]<<-sum(qalyLoss)\
-        \
-        #CDC+Thermal imaging\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=e_cdcAppTherm, c_int=c_cdcAppTherm, app=0, test=1, testC=0, testF=89, testSens=0.032, testSpec=0.95, randSample=1) \
-        dayP[i,5]<<-sum(state[,1])\
-        exP[i,5]<<-sum(ex1)\
-        deathP[i,5]<<-sum(death)\
-        costP[i,5]<<-sum(cost)\
-        valOnsiteP[i,5]<<-sum(valOnsite)\
-        qalyLossP[i,5]<<-sum(qalyLoss)\
-        \
-        #CDC+Gateway PCR\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=e_cdc, c_int=c_cdc, app=0, test=1, testC=c_PCR, testF=0, testSens=PCRSens, testSpec=PCRSpec, randSample=1)\
-        dayP[i,6]<<-sum(state[,1])\
-        exP[i,6]<<-sum(ex1)\
-        deathP[i,6]<<-sum(death)\
-        costP[i,6]<<-sum(cost)\
-        valOnsiteP[i,6]<<-sum(valOnsite)\
-        qalyLossP[i,6]<<-sum(qalyLoss)\
-        \
-        #Hypothetical\
-        complianceSympS<<-complianceSympS0\
-        core(e_int=e_hyp, c_int=c_hyp, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1)\
-        dayP[i,7]<<-sum(state[,1])\
-        exP[i,7]<<-sum(ex1)\
-        deathP[i,7]<<-sum(death)\
-        costP[i,7]<<-sum(cost)\
-        valOnsiteP[i,7]<<-sum(valOnsite)\
-        qalyLossP[i,7]<<-sum(qalyLoss)\
-    \} \
-    \
-    diffDay[,1]<<-0\
-    diffEx[,1]<<-0\
-    diffDeath[,1]<<-0\
-    diffQalyLoss[,1]<<-0\
-    diffValOnsite[,1]<<-0\
-    diffCost[,1]<<-0\
-    \
-    diffDay[,2]<<-dayP[,2]-dayP[,1]\
-    diffEx[,2]<<-exP[,1]-exP[,2]\
-    diffDeath[,2]<<-deathP[,1]-deathP[,2]\
-    diffQalyLoss[,2]<<-qalyLossP[,2]-qalyLossP[,1]\
-    diffValOnsite[,2]<<-valOnsiteP[,2]-valOnsiteP[,1]\
-    diffCost[,2]<<-costP[,2]-costP[,1]\
-    \
-    diffDay[,3]<<-dayP[,3]-dayP[,1]\
-    diffEx[,3]<<-exP[,1]-exP[,3]\
-    diffDeath[,3]<<-deathP[,1]-deathP[,3]\
-    diffQalyLoss[,3]<<-qalyLossP[,3]-qalyLossP[,1]\
-    diffValOnsite[,3]<<-valOnsiteP[,3]-valOnsiteP[,1]\
-    diffCost[,3]<<-costP[,3]-costP[,1]\
-    \
-    diffDay[,4]<<-dayP[,4]-dayP[,1]\
-    diffEx[,4]<<-exP[,1]-exP[,4]\
-    diffDeath[,4]<<-deathP[,1]-deathP[,4]\
-    diffQalyLoss[,4]<<-qalyLossP[,4]-qalyLossP[,1]\
-    diffValOnsite[,4]<<-valOnsiteP[,4]-valOnsiteP[,1]\
-    diffCost[,4]<<-costP[,4]-costP[,1]\
-    \
-    diffDay[,5]<<-dayP[,5]-dayP[,1]\
-    diffEx[,5]<<-exP[,1]-exP[,5]\
-    diffDeath[,5]<<-deathP[,1]-deathP[,5]\
-    diffQalyLoss[,5]<<-qalyLossP[,5]-qalyLossP[,1]\
-    diffValOnsite[,5]<<-valOnsiteP[,5]-valOnsiteP[,1]\
-    diffCost[,5]<<-costP[,5]-costP[,1]\
-    \
-    diffDay[,6]<<-dayP[,6]-dayP[,1]\
-    diffEx[,6]<<-exP[,1]-exP[,6]\
-    diffDeath[,6]<<-deathP[,1]-deathP[,6]\
-    diffQalyLoss[,6]<<-qalyLossP[,6]-qalyLossP[,1]\
-    diffValOnsite[,6]<<-valOnsiteP[,6]-valOnsiteP[,1]\
-    diffCost[,6]<<-costP[,6]-costP[,1]\
-    \
-    diffDay[,7]<<-dayP[,7]-dayP[,1]\
-    diffEx[,7]<<-exP[,1]-exP[,7]\
-    diffDeath[,7]<<-deathP[,1]-deathP[,7]\
-    diffQalyLoss[,7]<<-qalyLossP[,7]-qalyLossP[,1]\
-    diffValOnsite[,7]<<-valOnsiteP[,7]-valOnsiteP[,1]\
-    diffCost[,7]<<-costP[,7]-costP[,1]\
-    \
-    tab1<<-matrix(0,nrow=14,ncol=7)\
-    rownames(tab1)<<-c("Avg. no. of days campus remains open", "Avg. no. of hospitalizations", "Avg. no. of deaths", "Avg. losses of QALYs", "Avg. medical direct & indirect costs ($)", "Est. for value of in-person vs. online classes", "Incremental no. of days campus remains open (vs. no guidelines)",\
-                       "Avg. reductions in hospitalizations (vs. no guidelines)", "Avg. reductions in deaths (vs. no guidelines)", "Avg. incremental QALYs gained (vs. no guidelines)", "Difference in medical direct & indirect costs ($) (vs. no guidelines)", \
-                       "Incremental est. for value of in-person vs. online classes ($) (vs. no guidelines)", "ICER ($/QALY) (vs. no guidelines)", "ICER ($/QALY) (vs. CDC guidelines")\
-\
-    tab1<<-rbind(round(colMeans(dayP), 3),\
-          round(colMeans(exP), 3),\
-          round(colMeans(deathP), 3),\
-          round(colMeans(qalyLossP), 3),\
-          formatC(round(colMeans(costP), 0), format="f", big.mark=",", digits=0),\
-          round(colMeans(diffEx), 3),\
-          round(colMeans(diffDeath), 3),\
-          round(colMeans(diffQalyLoss), 3),\
-          formatC(round(colMeans(diffCost), 0), format="f", big.mark=",", digits=0),\
-          c(NA, formatC(round(((colMeans(costP-valOnsiteP)[2:7]-colMeans(costP-valOnsiteP)[1])/(colMeans(qalyLossP)[2:7]-colMeans(qalyLossP)[1])),0), format="f", big.mark=",", digits=0)),\
-          c(NA, NA, formatC(round(((colMeans(costP-valOnsiteP)[3:7]-colMeans(costP-valOnsiteP)[2])/(colMeans(qalyLossP)[3:7]-colMeans(qalyLossP)[2])),0), format="f", big.mark=",", digits=0))\
-        )\
-    rownames(tab1)<<-c("Days campus remains open", "Hospitalizations", "Deaths", "QALYs lost", "Medical costs ($)",\
-                       "Mean reduction in hospitalizations (vs. do nothing)", "Mean reduction in deaths (vs. do nothing)", "Incremental QALYs gained (vs. do nothing)", \
-                       "Incremental medical costs (vs. do nothing)", "ICER ($/QALY) (vs. do nothing)", "ICER ($/QALY) (vs. CDC guidelines)")\
-    colnames(tab1)<<-c("No guidelines", "CDC guidelines", "Mobile symptom checking application", "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection", "Hypothetical user-defiend intervention")\
-\}\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-ui <- fluidPage(\
-\
-    titlePanel("Cost-effectiveness of Strategies to Re-Open Universities in the Fall of 2020: a case-study for Columbia University in the City of New York"),\
-\
-    sidebarLayout(\
-        sidebarPanel(\
-            helpText("In this model, we explore the cost-effectiveness of different infection control strategies to re-open Columbia University in the Fall of 2020. The model contains a number of user-specified inputs that are intended to allow the model to be used by other universities, schools, and businesses. This will also allow the data that populates the model to be updated as new information about Covid-19 becomes available."),\
-            br(),\
-            \
-            tabsetPanel(id = "tab",       \
-                        tabPanel("Contact information", \
-                                 list( \
-                                        sliderInput("Ns0",\
-                                                    "Number of students attending in-person classes in Fall 2020",\
-                                                    min = 1, \
-                                                    max = 50000,\
-                                                    value = 10000),\
-                                        sliderInput("Ne0",\
-                                                    "Number of staff coming to campus in Fall 2020",\
-                                                    min = 1, \
-                                                    max = 50000,\
-                                                    value = 3000), \
-                                        sliderInput("css0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) that each student has with another students on campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 10),\
-                                        sliderInput("cse0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) that each student has with staff/faculty on campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 3),    \
-                                        sliderInput("ces0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) that each staff/faculty member has with students on campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 3),  \
-                                        sliderInput("cee0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) that each staff/faculty has with another staff/faculty member on campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 3),             \
-                                        sliderInput("cso0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) between each student and community members outside of campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 3),                 \
-                                        sliderInput("ceo0",\
-                                                    "Average number of close contacts (within 6 feet for >10 mins) between each staff/faculty member and community members outside of campus per day",\
-                                                    min = 1, \
-                                                    max = 100,\
-                                                    value = 3)    \
-                                    )\
-                                ),\
-                        \
-                        tabPanel("Community characteristics", \
-                                 list( \
-                                     sliderInput("pc0",\
-                                                 "Estimate for number of infectious people in the community outside of campus (# per 100,000)",\
-                                                 min = 0, \
-                                                 max = 2000,\
-                                                 value = 131),\
-                                     sliderInput("complianceO0",\
-                                                 "Proportion of people within the community wearing face masks regularly when indoors or in crowds outdoors",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.7)\
-                                    ) \
-\
-                                ), \
-                        \
-                        \
-                        tabPanel("University characteristics", \
-                                 list( \
-                                     sliderInput("complianceSympS0",\
-                                                 "Compliance of students/staff to self-quarantine for 14 days as soon as they notice symptoms for Covid-19",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.75),\
-                                     sliderInput("value0",\
-                                                 "Average tuition for one student over the entire Fall 2020 semester",\
-                                                 min = 0, \
-                                                 max = 100000,\
-                                                 value = 12000)\
-                                 ) \
-                                 \
-                        ), \
-                        \
-                        tabPanel("Likelihood of super-spreader event", \
-                                 list( \
-                                     sliderInput("nParty0",\
-                                                 "Estimate of total community parties in which 10 or more students will attend over the entire Fall 2020 semester",\
-                                                 min = 0, \
-                                                 max = 100,\
-                                                 value = 20),\
-                                     sliderInput("sParty0",\
-                                                 "Average number of community members who will attend each community party",\
-                                                 min = 0, \
-                                                 max = 100,\
-                                                 value = 5)\
-                                 ) \
-                        ), \
-                        \
-                        tabPanel("Interventions", \
-                                 list( \
-                                     sliderInput("n_mask0",\
-                                                 "Number of enhanced masks provided to each student/staff over the entire Fall semester",\
-                                                 min = 0, \
-                                                 max = 90,\
-                                                 value = 60),\
-                                     sliderInput("c_mask0",\
-                                                 "Cost of each enhanced mask",\
-                                                 min = 0, \
-                                                 max = 100,\
-                                                 value = 2),\
-                                     sliderInput("e_mask0",\
-                                                 "Efficacy of enhanced mask, enter odds ratio of infection associated with your enhanced mask relative to no intervention (default value is efficacy of N95 masks)",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.09),\
-                                     sliderInput("PCRSens0",\
-                                                 "Sensitivity of PCR testing",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.95),\
-                                     sliderInput("PCRSpec0",\
-                                                 "Specificity of PCR testing",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.95),\
-                                     sliderInput("c_PCR0",\
-                                                 "Unit cost of PCR testing ($/test)",\
-                                                 min = 0, \
-                                                 max = 200,\
-                                                 value = 31),\
-                                     sliderInput("e_hyp0",\
-                                                 "If you have a specific intervention to test, enter the odds ratio, for infection reduction, assoiated with your intervention relative to no intervention (odds ratio of 1 means no effect and that of 0 means reducing infection transmission to 0)",\
-                                                 min = 0, \
-                                                 max = 1,\
-                                                 value = 0.1),\
-                                     sliderInput("c_hyp0",\
-                                                 "If you have a specific intervention to test, please provide the total investment cost of your intervention over the entire Fall 2020 semester (for fixed cost interventions, please depreciate the cost)",\
-                                                 min = 0, \
-                                                 max = 10000000,\
-                                                 value = 2000000)\
-                                 ) \
-                        )\
-        )\
-        \
-        ),    \
-\
-        mainPanel(\
-            br(),\
-            br(),\
-            br(),\
-            paste("Table 1. Health and economic outcomes of interventions for re-opening university campuses in the Fall of 2020. The interventions are listed in the columns. Enhanced masks, thermal imaging, gateway testing (testing all students before school begins), and the hypothetical user-defined intervention are compared with CDC guidelines and symptom checking applications unless otherwise specified. Row values show outcome measures related to each intervention. The days the campus remains open refers to the average number of days that the campus can remain open over a 90 day semester before contact tracers are overwhelmed, and the campus must close (either 50 cumulative cases or 5 cases from a super-spreader event). Hospitalizations refers to the total number of hospitalizations that would be expected to occur over the 90 day semester. Deaths refers to the total number of deaths expected to occur over the 90 day semester. QALYs lost refers to the total number of quality-adjusted life years lost over a 90 day semester. Medical costs refers to the total direct and indirect medical costs accrued over the semester. ICER refers to the incremental cost-effectiveness ratio or the difference in costs divided by the difference in QALYs"),\
-            tableOutput("out_tab"),\
-            br(),\
-            br(),\
-            paste("Figure 1. Multi-way sensitivity analysis of the interventions we study to re-open university campuses in the Fall of 2020. Each intervention is represented with a unique color. The figure shows the dominant intervention across variation in the number of infectious people in the community, the willingness-to-pay for a quality-adjusted life year, and the average number of people wearing face masks regularly inside or in crowded outdoor areas"),\
-            plotOutput("out_fig")\
-        )\
-    )\
-)\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-\
-# Define server logic required to draw a histogram\
-server <- function(input, output) \{\
-\
-    output$out_tab <- renderTable(\{\
-\
-        Ns<<-input$Ns0 \
-        dormProp<<-0.37 \
-        Ne<<-input$Ne0 \
-        css<<-input$css0 \
-        cse<<-input$cse0 \
-        cso<<-input$cso0 \
-        ces<<-input$ces0 \
-        cee<<-input$cee0 \
-        ceo<<-input$ceo0 \
-        \
-        #********************Prevalence info********************************************************\
-        pc<<-input$pc0/100000 \
-        infInit_s<<-input$pc0/100000*input$Ns0 \
-        infInit_e<<-input$pc0/100000*input$Ne0 \
-        \
-        pmaj<<-(input$nParty0/90)*(1-(1-0.1*input$pc0/100000)^input$sParty0) \
-        tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-        tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-        \
-        #********************Intervention info***********************\
-        c_no<<-0 \
-        c_adh<<-(((39517+16833+33600+55860)/3659)*Ns)/2 \
-        c_cust<<-((448000/3659)*Ns)/2 \
-        c_ppe<<-(1440/3659)*Ns/2+(44415/329)*(Ns+Ne)/2 \
-        c_cdc<<-c_adh+c_cust+c_ppe \
-        c_cdcApp<<-c_adh+c_cust+c_ppe \
-        c_cdcAppN95<<-c_adh+c_cust+(1440/3659)*Ns/2+(Ns+Ne)*input$n_mask0*input$c_mask0 \
-        c_cdcAppTherm<<-c_adh+c_cust+c_ppe+485000 \
-        c_PCR<<-input$c_PCR0 \
-        \
-        e_no<<-1 \
-        e_cdc<<-0.45*0.33 \
-        e_cdcApp<<-0.45*0.33 \
-        e_cdcAppN95<<-0.45*input$e_mask0 \
-        e_cdcAppTherm<<-0.45*0.33 \
-        PCRF<<-11 \
-        PCRSens<<-input$PCRSens0 \
-        PCRSpec<<-input$PCRSpec0 \
-        \
-        complianceO<<-input$complianceO0 \
-        complianceSympS0<<-input$complianceSympS0 \
-        e_rd_o<<-0.7\
-        \
-        is1<<-floor(0.06*Ns) \
-        ie<<-floor(0.06*Ne)  \
-        \
-        tc<<-0.0045 \
-        ts0<<-0.0045 \
-\
-        totTime<<-5\
-        rs<<-2 \
-        ri<<-3  \
-        ra<<-9 \
-        \
-        ls1<<-1-0.47 \
-        \
-        n_major<<-5 \
-        \
-        pHospE<<-0.07 \
-        pHospS<<-0.02 \
-        pDeadE<<-0.002 \
-        pDeadS<<-0.00013 \
-        \
-        cDirHosp<<-23489 \
-        cIndirHosp<<-(21*8*25) \
-        cFuneral<<-10000 \
-        cIndirDeadE<<-(65-46)*50000 \
-        cIndirDeadS<<-(65-26)*50000 \
-        cMed<<-0 \
-        cIndir<<-(14*8*25) \
-        \
-        rr_online<<-0.48 \
-        value<<-(1/90)*(input$value0*(1-rr_online))  \
-        valueStaff<<-18*25\
-        \
-        qLossCovidE<<--0.14\
-        qLossCovidS<<--0.09\
-        qLossHosp<<--0.6 \
-        qLossDeadE<<--(80-46)*0.85 \
-        qLossDeadS<<--(80-26)*0.85 \
-        \
-        \
-        #********************************************************************************************************\
-        #********************Additional information dedicated only to the Web applciation***********************\
-        #********************************************************************************************************\
-        e_hyp<<-input$e_hyp0 \
-        c_hyp<<-input$c_hyp0 \
-        \
-        runOutput(n=1, pcFactor=1)\
-        return(tab1)\
-        \
-    \},rownames = TRUE) #end out_tab\
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    \
-    output$out_fig <- renderPlot(\{\
-        \
-        Ns<<-input$Ns0 \
-        dormProp<<-0.37 \
-        Ne<<-input$Ne0 \
-        css<<-input$css0 \
-        cse<<-input$cse0 \
-        cso<<-input$cso0 \
-        ces<<-input$ces0 \
-        cee<<-input$cee0 \
-        ceo<<-input$ceo0 \
-        \
-        #********************Prevalence info********************************************************\
-        pc<<-input$pc0/100000 \
-        infInit_s<<-input$pc0/100000*input$Ns0 \
-        infInit_e<<-input$pc0/100000*input$Ne0 \
-        \
-        pmaj<<-(input$nParty0/90)*(1-(1-0.1*input$pc0/100000)^input$sParty0) \
-        tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-        tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-        \
-        #********************Intervention info***********************\
-        c_no<<-0 \
-        c_adh<<-(((39517+16833+33600+55860)/3659)*Ns)/2 \
-        c_cust<<-((448000/3659)*Ns)/2 \
-        c_ppe<<-(1440/3659)*Ns/2+(44415/329)*(Ns+Ne)/2 \
-        c_cdc<<-c_adh+c_cust+c_ppe \
-        c_cdcApp<<-c_adh+c_cust+c_ppe \
-        c_cdcAppN95<<-c_adh+c_cust+(1440/3659)*Ns/2+(Ns+Ne)*input$n_mask0*input$c_mask0 \
-        c_cdcAppTherm<<-c_adh+c_cust+c_ppe+485000 \
-        c_PCR<<-input$c_PCR0 \
-        \
-        e_no<<-1 \
-        e_cdc<<-0.45*0.33 \
-        e_cdcApp<<-0.45*0.33 \
-        e_cdcAppN95<<-0.45*input$e_mask0 \
-        e_cdcAppTherm<<-0.45*0.33 \
-        PCRF<<-11 \
-        PCRSens<<-input$PCRSens0 \
-        PCRSpec<<-input$PCRSpec0 \
-        \
-        complianceO<<-input$complianceO0 \
-        complianceSympS0<<-input$complianceSympS0 \
-        e_rd_o<<-0.7\
-        \
-        is1<<-floor(0.06*Ns) \
-        ie<<-floor(0.06*Ne)  \
-        \
-        tc<<-0.0045 \
-        ts0<<-0.0045 \
-        \
-        totTime<<-5\
-        rs<<-2 \
-        ri<<-3  \
-        ra<<-9 \
-        \
-        ls1<<-1-0.47 \
-        \
-        n_major<<-5 \
-        \
-        pHospE<<-0.07 \
-        pHospS<<-0.02 \
-        pDeadE<<-0.002 \
-        pDeadS<<-0.00013 \
-        \
-        cDirHosp<<-23489 \
-        cIndirHosp<<-(21*8*25) \
-        cFuneral<<-10000 \
-        cIndirDeadE<<-(65-46)*50000 \
-        cIndirDeadS<<-(65-26)*50000 \
-        cMed<<-0 \
-        cIndir<<-(14*8*25) \
-        \
-        rr_online<<-0.48 \
-        value<<-(1/90)*(input$value0*(1-rr_online))  \
-        valueStaff<<-18*25\
-        \
-        qLossCovidE<<--0.14\
-        qLossCovidS<<--0.09\
-        qLossHosp<<--0.6 \
-        qLossDeadE<<--(80-46)*0.85 \
-        qLossDeadS<<--(80-26)*0.85 \
-        \
-        \
-        #********************************************************************************************************\
-        #********************Additional information dedicated only to the Web applciation***********************\
-        #********************************************************************************************************\
-        e_hyp<<-input$e_hyp0 \
-        c_hyp<<-input$c_hyp0     \
-        \
-        #************************************Part A of Figure********************************************************\
-        bestInt<<-NA\
-        complianceO<<-0.25\
-        for (i in 1:5)\
-        \{\
-            pc<<-(500*i)/100000\
-            infInit_s<<-pc*input$Ns0 \
-            infInit_e<<-pc*input$Ne0 \
-            pmaj<<-(input$nParty0/90)*(1-(1-0.1*pc)^input$sParty0) \
-            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)\
-            \
-            runOutput(n=1, pcFactor=1)\
-            for (j in 1:5)\
-            \{\
-                wtp<<-200000*(10^(j-1))\
-                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)\
-                bestInt<<-c(bestInt, which.max(NMB[-1]))\
-            \}\
-        \}\
-        xx1 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")\
-        yy1 <<- c("500","1000","1500","2000", "2500")\
-        data1 <<- expand.grid(Y=xx1, X=yy1)\
-        data1$zz1 <<- bestInt[-1]\
-        # Heatmap \
-        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")\
-        g1<<-ggplot(data1, aes(X,Y))+ \
-            geom_tile(aes(fill=factor(data1$zz1))) +\
-            #setting the color\
-            scale_fill_manual(\
-                name="Interventions",\
-                values=col1,\
-                breaks=c("1","2","3","4", "5", "6"),\
-                labels=c("CDC guidelines","Mobile symptom checking application",\
-                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",\
-                         "Hypothetical user-defiend intervention"))+\
-            labs(title="Community compliance with wearing regular face mask of 25%", x="Community active prevalence (XE-5)", y= "Willingness-to-pay")+\
-            theme_classic()\
-            \
-        \
-        #************************************Part B of Figure********************************************************\
-        bestInt<<-NA\
-        complianceO<<-0.5\
-        for (i in 1:5)\
-        \{\
-            pc<<-(500*i)/100000\
-            infInit_s<<-pc*input$Ns0 \
-            infInit_e<<-pc*input$Ne0 \
-            pmaj<<-(input$nParty0/90)*(1-(1-0.1*pc)^input$sParty0) \
-            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)\
-            \
-            runOutput(n=1, pcFactor=1)\
-            for (j in 1:5)\
-            \{\
-                wtp<<-200000*(10^(j-1))\
-                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)\
-                bestInt<<-c(bestInt, which.max(NMB[-1]))\
-            \}\
-        \}\
-        xx2 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")\
-        yy2 <<- c("500","1000","1500","2000", "2500")\
-        data2 <<- expand.grid(Y=xx2, X=yy2)\
-        data2$zz2 <<- bestInt[-1]\
-        # Heatmap \
-        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")\
-        g2<<-ggplot(data2, aes(X,Y))+ \
-            geom_tile(aes(fill=factor(data2$zz2))) +\
-            #setting the color\
-            scale_fill_manual(\
-                name="Interventions",\
-                values=col1,\
-                breaks=c("1","2","3","4", "5", "6"),\
-                labels=c("CDC guidelines","Mobile symptom checking application",\
-                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",\
-                         "Hypothetical user-defiend intervention"))+\
-            labs(title="Community compliance with wearing regular face mask of 50%", x="Community active prevalence (XE-5)", y= "Willingness-to-pay")+\
-            theme_classic()\
-        \
-        \
-        #************************************Part C of Figure********************************************************\
-        bestInt<<-NA\
-        complianceO<<-0.75\
-        for (i in 1:5)\
-        \{\
-            pc<<-(500*i)/100000\
-            infInit_s<<-pc*input$Ns0  \
-            infInit_e<<-pc*input$Ne0  \
-            pmaj<<-(input$nParty0/90)*(1-(1-0.1*pc)^input$sParty0) \
-            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) \
-            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)\
-            \
-            runOutput(n=1, pcFactor=1)\
-            for (j in 1:5)\
-            \{\
-                wtp<<-200000*(10^(j-1))\
-                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)\
-                bestInt<<-c(bestInt, which.max(NMB[-1]))\
-            \}\
-        \}\
-        xx3 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")\
-        yy3 <<- c("500","1000","1500","2000", "2500")\
-        data3 <<- expand.grid(Y=xx3, X=yy3)\
-        data3$zz3 <<- bestInt[-1]\
-        # Heatmap \
-        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")\
-        g3<<-ggplot(data3, aes(X,Y))+ \
-            geom_tile(aes(fill=factor(data3$zz3))) +\
-            #setting the color\
-            scale_fill_manual(\
-                name="Interventions",\
-                values=col1,\
-                breaks=c("1","2","3","4", "5", "6"),\
-                labels=c("CDC guidelines","Mobile symptom checking application",\
-                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",\
-                         "Hypothetical user-defiend intervention"))+\
-            labs(title="Community compliance with wearing regular face mask of 75%", x="Community active prevalence (XE-5)", y= "Willingness-to-pay")+\
-            theme_classic()\
-        \
-            g4<<-ggarrange(g1, g2 , g3, \
-                  labels = c("A", "B", "C"),\
-                  ncol = 1, nrow = 3)\
-            plot(g4)\
-\
-    \}) \
-\}\
-\
-\
-\
-\
-\
-\
-\
-# Run the application \
-shinyApp(ui = ui, server = server)\
-\
+
+
+
+
+
+
+
+
+
+core<-function(e_int, c_int, app, test, testC, testF, testSens, testSpec, randSample=0.05)
+{
+    ts1<<-ts0
+    tp<<-tp0
+    thresh<<-thresh0
+    css<<-css0
+    cse<<-cse0
+    cso<<-cso0
+    ces<<-ces0
+    cee<<-cee0
+    ceo<<-ceo0
+
+    state<<-matrix(0,nrow=91,ncol=2)
+    state[1,]<<-c(1,0)
+    colnames(state)<<-c("open", "close")
+    
+    stateMaj<<-matrix(0,nrow=91,ncol=2)
+    stateMaj[1,]<<-c(1,0)
+    colnames(stateMaj)<<-c("Major event free", "Major event")
+    
+    cost<<-rep(0,90)
+    
+    valOnsite<<-rep(0,90)
+    
+    qalyLoss<<-rep(0,90)
+    
+    ex1<<-rep(0,90)
+    
+    death<<-rep(0,90)
+    
+    S<<-matrix(0,nrow=90, ncol=2)
+    colnames(S)<<-c("Student","Staff")
+    A<<-matrix(0,nrow=90, ncol=2)
+    colnames(A)<<-c("Student","Staff")
+    S2<<-matrix(0,nrow=90, ncol=2) 
+    colnames(S2)<<-c("Student","Staff")
+    A2<<-matrix(0,nrow=90, ncol=2) 
+    colnames(A2)<<-c("Student","Staff")
+    ps<<-matrix(0,nrow=90,ncol=2) 
+    colnames(ps)<<-c("Symptomatic","Asymptomatic")
+    pe<<-matrix(0,nrow=90,ncol=2) 
+    colnames(pe)<<-c("Symptomatic","Asymptomatic")
+    Sus<<-matrix(0,nrow=90, ncol=2) 
+    colnames(Sus)<<-c("Student","Staff")
+    
+    D1<<-matrix(0,nrow=90, ncol=2) 
+    colnames(D1)<<-c("Student","Staff") 
+    
+    D2<<-matrix(0,nrow=90, ncol=2) 
+    colnames(D1)<<-c("Student","Staff") 
+    
+    SInit<<-cbind(c(rep(infInit_s*ls1, rs), rep(0, 90-rs)), c(rep(infInit_e*ls1, rs), rep(0, 90-rs))) 
+    colnames(SInit)<<-c("Student","Staff")
+    AInit<<-cbind(c(rep(infInit_s*(1-ls1), (rs+ra)), rep(0, 90-rs-ra)), c(rep(infInit_e*(1-ls1), (rs+ra)), rep(0, 90-rs-ra))) 
+    colnames(AInit)<<-c("Student","Staff")
+    
+    p0so<<-rep(0,90)
+    p0sc<<-rep(0,90)
+    p0eo<<-rep(0,90)
+    p0ec<<-rep(0,90)
+    
+    testDay<<-1
+    if (test==1)
+    {
+        j<<-1
+        while (j<=testF)
+        {
+            testDay<<-c(testDay, floor(90/(testF+1))*j)
+            j<<-j+1
+        }
+    }
+    
+    for (d in 1:90)
+    {
+        
+        D1[d,1]<<-0 + (d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), 1]*complianceSympS+
+            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), 1] + (d==(rs+1))*infInit_s*ls1
+        
+        D1[d,2]<<-0 + (d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), 2]*complianceSympS+
+            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), 2] + (d==(rs+1))*infInit_e*ls1
+        
+        D2[d,1]<<-0
+        D2[d,2]<<-0
+        
+        S[max((d-ri-rs),1), ]<<-(d>(ri+rs))*(app==0)*S[max((d-ri-rs),1), ]*(1-complianceSympS)+
+            (d>(ri+rs))*(app==1)*S[max((d-ri-rs),1), ]*(1-1)+
+            (d<=(ri+rs))*S[max((d-ri-rs),1), ]
+
+        
+        if (test==1)
+        {
+            if (d==1)
+            {
+                D1[d, 1]<<-0+ (SInit[d, 1]+AInit[d, 1])*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*testSens)
+                D1[d, 2]<<-0+ (SInit[d, 2]+AInit[d, 2])*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2]*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2]*testSens)
+                
+                D2[d,1]<<-(Ns-sum(S2[1:max((d-1),1), 1])-sum(A2[1:max((d-1),1), 1])-infInit_s)*(1-testSpec)
+                D2[d,2]<<-(Ne-sum(S2[1:max((d-1),1), 2])-sum(A2[1:max((d-1),1), 2])-infInit_e)*(1-testSpec)
+                
+                #Update prevalence
+                SInit<<-SInit*(1-testSens)
+                AInit<<-AInit*(1-testSens)
+                
+                S[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+(d<=ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]
+                A[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+ (d<=ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]
+                
+            } else if (d>1 & (d%%90)%in%testDay)
+            {
+                D1[d, 1]<<-0+ (SInit[d, 1]+AInit[d, 1])*dormProp*testSens + (SInit[d, 1]+AInit[d, 1])*(1-dormProp)*randSample*testSens +
+                    (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*dormProp*testSens) + 
+                    (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1]*(1-dormProp)*randSample*testSens) +
+                    (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*dormProp*testSens) +
+                    (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1]*(1-dormProp)*randSample*testSens)
+                D1[d, 2]<<-0+ (SInit[d, 2]+AInit[d, 2])*randSample*testSens + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2]*randSample*testSens) + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2]*randSample*testSens)
+                
+                
+                D2[d,1]<<-(Ns-sum(D2[max(d-14,1):d,1])-(SInit[d, 1]+AInit[d, 1]+sum(S[max((d-ri-rs-ra),1):d, 1])+sum(A[max((d-ri-rs-ra),1):d, 1])))*dormProp*(1-testSpec)+
+                    (Ns-sum(D2[max(d-14,1):d,1])-(SInit[d, 1]+AInit[d, 1]+sum(S[max((d-ri-rs-ra),1):d, 1])+sum(A[max((d-ri-rs-ra),1):d, 1])))*(1-dormProp)*randSample*(1-testSpec)
+                
+                D2[d,2]<<-(Ne-sum(D2[max(d-14,1):d,2])-(SInit[d, 2]+AInit[d, 2]+sum(S[max((d-ri-rs-ra),1):d, 2])+sum(A[max((d-ri-rs-ra),1):d, 2])))*randSample*(1-testSpec)
+                
+                #Update prevalence
+                SInit[,1]<<-SInit[,1]*dormProp*(1-testSens) + SInit[,1]*(1-dormProp)*(1-randSample*testSens)
+                SInit[,2]<<-SInit[,2]*(1-randSample*testSens) 
+                AInit[,1]<<-AInit[,1]*dormProp*(1-testSens) + AInit[,1]*(1-dormProp)*(1-randSample*testSens)
+                AInit[,2]<<-AInit[,2]*(1-randSample*testSens) 
+                
+                S[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+(d<=ri)*S[max((d-ri-rs-ra),1):max((d-ri),1), ]
+                A[max((d-ri-rs-ra),1):max((d-ri),1), ]<<-(d>ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]*(1-testSens)+ (d<=ri)*A[max((d-ri-rs-ra),1):max((d-ri),1), ]
+            }
+        }
+        
+        #******************************************************Defining prevalence**************************************************************************
+        goS<<-max((Ns-sum(D1[max(1,d-14): max(1,d), 1])-sum(D2[max(1,d-14): d, 1])),0) 
+        goE<<-max((Ne-sum(D1[max(1,d-14): max(1,d), 2])-sum(D2[max(1,d-14): d, 2])),0) 
+        activeCaseSympS<<-(SInit[d, 1] + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 1])) 
+        activeCaseAsympS<<-(AInit[d, 1] + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 1])) 
+        activeCaseSympE<<-(SInit[d, 2] + (d>ri)*sum(S[max((d-ri-rs-ra),1):max((d-ri),1), 2])) 
+        activeCaseAsympE<<-(AInit[d, 2] + (d>ri)*sum(A[max((d-ri-rs-ra),1):max((d-ri),1), 2])) 
+        
+        ps[d,1]<<-activeCaseSympS/goS
+        ps[d,2]<<-activeCaseAsympS/goS
+        pe[d,1]<<-activeCaseSympE/goE
+        pe[d,2]<<-activeCaseAsympE/goE
+        
+        Sus[d, 1]<<-max((Ns-is1-sum(S2[1:max((d-1),1), 1])-sum(A2[1:max((d-1),1), 1])-infInit_s-D1[d,1]-sum(D2[max(1,d-14): d, 1])),0)
+        Sus[d, 2]<<-max((Ne-ie-sum(S2[1:max((d-1),1), 2])-sum(A2[1:max((d-1),1), 2])-infInit_e-D1[d,2]-sum(D2[max(1,d-14): d, 2])),0)
+        
+        #**************For students**************************
+        p0so[d]<<-1-(1-complianceO*e_rd_o)*(1-(1-pc*tc)^cso)
+        p0sc[d]<<-(1-ps[d,1]*ts1-ps[d,2]*ts1*tr_asymp)^(css)*
+            (1-pe[d,1]*ts1-pe[d,2]*ts1*tr_asymp)^(cse)
+        oddsS<<-(1-p0sc[d])/p0sc[d]
+        oddsS<<-oddsS*e_int
+        p0sc[d]<<-1-oddsS/(1+oddsS)
+        
+
+        S[d, 1]<<-(1-p0so[d]*p0sc[d])*Sus[d,1]*ls1 
+        
+        A[d, 1]<<-(1-p0so[d]*p0sc[d])*Sus[d,1]*(1-ls1) 
+        
+        #**************For employees**************************
+        p0eo[d]<<-1-(1-complianceO*e_rd_o)*(1-(1-pc*tc)^ceo)
+        p0ec[d]<<-(1-ps[d,1]*ts1-ps[d,2]*ts1*tr_asymp)^(ces)*
+            (1-pe[d,1]*ts1-pe[d,2]*ts1*tr_asymp)^(cee)
+        oddsE<<-(1-p0ec[d])/p0ec[d]
+        oddsE<<-oddsE*e_int
+        p0ec[d]<<-1-oddsE/(1+oddsE)
+        
+
+        S[d, 2]<<-(1-p0eo[d]*p0ec[d])*Sus[d,2]*ls1 
+        
+        A[d, 2]<<-(1-p0eo[d]*p0ec[d])*Sus[d,2]*(1-ls1) 
+        
+        S2[d,]<<-S[d,]
+        A2[d,]<<-A[d,]
+        
+        
+        
+        #**************Building transition probabilities for campus open vs. close**************************
+        state[(d+1),]<<-state[d,]%*%tp
+        stateMaj[(d+1),]<<-stateMaj[d,]%*%tpMaj
+        
+        if (sum(S2[1:d, 1]+ A2[1:d, 1]+ S2[1:d, 2]+ A2[1:d, 2])>thresh) 
+        {
+            tp<<-matrix(c(0,1,0,1), nrow=2, ncol=2, byrow=T)
+            state[(d+1),]<<-state[d,]%*%tp
+            ts1<<-0
+            css<<-0
+            cse<<-0
+            cso<<-css0+cse0+cso0
+            ces<<-0
+            cee<<-0
+            ceo<<-ces0+cee0+ceo0
+            test<<-0
+            thresh<<-1000000
+        }
+        
+        cost[d]<<-(1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*(1-pHospS-pDeadS)*(cMed+cIndir)+
+            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*(1-pHospE-pDeadE)*(cMed+cIndir)+
+            (1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*pHospS*(cMed+cDirHosp+cIndirHosp)+
+            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*pHospE*(cMed+cDirHosp+cIndirHosp)+
+            (1-stateMaj[d,1])*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS*(cFuneral+cIndirDeadS)+
+            (1-stateMaj[d,1])*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE*(cFuneral+cIndirDeadE)+
+            (1-stateMaj[d,1])*pmaj*n_major*(1-pHospS-pDeadS)*(cMed+cIndir)+
+            (1-stateMaj[d,1])*pmaj*n_major*pHospS*(cMed+cDirHosp+cIndirHosp)+
+            (1-stateMaj[d,1])*pmaj*n_major*pDeadS*(cFuneral+cIndirDeadS)+
+            c_int/90 + 
+            test*(d==1)*state[d,1]*testC*(Ns+Ne) +
+            test*(d>1 & (d%%90)%in%testDay)*state[d,1]*testC*(Ns*dormProp+Ns*(1-dormProp)*randSample) + 
+            test*(d>1 & (d%%90)%in%testDay)*state[d,1]*testC*Ne*randSample + 
+            state[d,1]*D2[d,2]*valueStaff*14  
+
+        valOnsite[d]<<-state[d,1]*value*(Ns-sum(D2[max(1,d-14): max(1,d), 1]))
+        
+        ex1[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pHospS+
+            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pHospE+
+            stateMaj[d,1]*pmaj*n_major*pHospS
+        
+        death[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS+
+            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE+
+            stateMaj[d,1]*pmaj*n_major*pDeadS
+        
+        qalyLoss[d]<<-stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*(1-pHospS-pDeadS)*qLossCovidS*2/52+
+            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*(1-pHospE-pDeadE)*qLossCovidE*2/52+
+            stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pHospS*qLossHosp*3/52+
+            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pHospE*qLossHosp*3/52+
+            stateMaj[d,1]*(1-pmaj)*(S[d,1]+A[d,1])*pDeadS*qLossDeadS+
+            stateMaj[d,1]*(1-pmaj)*(S[d,2]+A[d,2])*pDeadE*qLossDeadE+
+            stateMaj[d,1]*pmaj*n_major*(1-pHospS-pDeadS)*qLossCovidS*2/52+
+            stateMaj[d,1]*pmaj*n_major*pHospS*qLossHosp*2/52+
+            stateMaj[d,1]*pmaj*n_major*pDeadS*qLossDeadS
+    } 
+} 
+
+
+
+
+
+
+
+
+
+runOutput<-function(n=1000, pcFactor=1)
+{
+    dayP<<-matrix(0,nrow=n,ncol=7)
+    colnames(dayP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    exP<<-matrix(0,nrow=n,ncol=7)
+    colnames(exP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    deathP<<-matrix(0,nrow=n,ncol=7)
+    colnames(deathP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    qalyLossP<<-matrix(0,nrow=n,ncol=7)
+    colnames(qalyLossP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    costP<<-matrix(0,nrow=n,ncol=7)
+    colnames(costP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    valOnsiteP<<-matrix(0,nrow=n,ncol=7)
+    colnames(valOnsiteP)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffDay<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffDay)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffEx<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffEx)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffDeath<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffDeath)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffQalyLoss<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffQalyLoss)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffCost<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffCost)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    diffValOnsite<<-matrix(0,nrow=n,ncol=7)
+    colnames(diffValOnsite)<<-c("No guide", "CDC", "CDC/app", "CDC/app/N95", "CDC/app/Therm", "PCR", "Hypothetical")
+    
+    for (i in 1:n)
+    {
+        #No guide
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_no, c_int=0, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) 
+        dayP[i,1]<<-sum(state[,1])
+        exP[i,1]<<-sum(ex1)
+        deathP[i,1]<<-sum(death)
+        costP[i,1]<<-sum(cost)
+        valOnsiteP[i,1]<<-sum(valOnsite)
+        qalyLossP[i,1]<<-sum(qalyLoss)
+        
+        #CDC
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_cdc, c_int=c_cdc, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) 
+        dayP[i,2]<<-sum(state[,1])
+        exP[i,2]<<-sum(ex1)
+        deathP[i,2]<<-sum(death)
+        costP[i,2]<<-sum(cost)
+        valOnsiteP[i,2]<<-sum(valOnsite)
+        qalyLossP[i,2]<<-sum(qalyLoss)
+        
+        #CDC+app
+        complianceSympS<<-min((complianceSympS0+0.1), 1)
+        core(e_int=e_cdcApp, c_int=c_cdcApp, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) 
+        dayP[i,3]<<-sum(state[,1])
+        exP[i,3]<<-sum(ex1)
+        deathP[i,3]<<-sum(death)
+        costP[i,3]<<-sum(cost)
+        valOnsiteP[i,3]<<-sum(valOnsite)
+        qalyLossP[i,3]<<-sum(qalyLoss)
+        
+        #CDC+N95
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_cdcAppN95, c_int=c_cdcAppN95, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1) 
+        dayP[i,4]<<-sum(state[,1])
+        exP[i,4]<<-sum(ex1)
+        deathP[i,4]<<-sum(death)
+        costP[i,4]<<-sum(cost)
+        valOnsiteP[i,4]<<-sum(valOnsite)
+        qalyLossP[i,4]<<-sum(qalyLoss)
+        
+        #CDC+Thermal imaging
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_cdcAppTherm, c_int=c_cdcAppTherm, app=0, test=1, testC=0, testF=89, testSens=(0.441*0.3/11), testSpec=0.999, randSample=1) 
+        dayP[i,5]<<-sum(state[,1])
+        exP[i,5]<<-sum(ex1)
+        deathP[i,5]<<-sum(death)
+        costP[i,5]<<-sum(cost)
+        valOnsiteP[i,5]<<-sum(valOnsite)
+        qalyLossP[i,5]<<-sum(qalyLoss)
+        
+        #CDC+Gateway PCR
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_cdc, c_int=c_cdc, app=0, test=1, testC=c_PCR, testF=0, testSens=PCRSens, testSpec=PCRSpec, randSample=1)
+        dayP[i,6]<<-sum(state[,1])
+        exP[i,6]<<-sum(ex1)
+        deathP[i,6]<<-sum(death)
+        costP[i,6]<<-sum(cost)
+        valOnsiteP[i,6]<<-sum(valOnsite)
+        qalyLossP[i,6]<<-sum(qalyLoss)
+        
+        #Hypothetical
+        complianceSympS<<-complianceSympS0
+        core(e_int=e_hyp, c_int=c_hyp, app=0, test=0, testC=0, testF=0, testSens=0, testSpec=0, randSample=1)
+        dayP[i,7]<<-sum(state[,1])
+        exP[i,7]<<-sum(ex1)
+        deathP[i,7]<<-sum(death)
+        costP[i,7]<<-sum(cost)
+        valOnsiteP[i,7]<<-sum(valOnsite)
+        qalyLossP[i,7]<<-sum(qalyLoss)
+    } 
+    
+    diffDay[,1]<<-0
+    diffEx[,1]<<-0
+    diffDeath[,1]<<-0
+    diffQalyLoss[,1]<<-0
+    diffValOnsite[,1]<<-0
+    diffCost[,1]<<-0
+    
+    diffDay[,2]<<-dayP[,2]-dayP[,1]
+    diffEx[,2]<<-exP[,1]-exP[,2]
+    diffDeath[,2]<<-deathP[,1]-deathP[,2]
+    diffQalyLoss[,2]<<-qalyLossP[,2]-qalyLossP[,1]
+    diffValOnsite[,2]<<-valOnsiteP[,2]-valOnsiteP[,1]
+    diffCost[,2]<<-costP[,2]-costP[,1]
+    
+    diffDay[,3]<<-dayP[,3]-dayP[,1]
+    diffEx[,3]<<-exP[,1]-exP[,3]
+    diffDeath[,3]<<-deathP[,1]-deathP[,3]
+    diffQalyLoss[,3]<<-qalyLossP[,3]-qalyLossP[,1]
+    diffValOnsite[,3]<<-valOnsiteP[,3]-valOnsiteP[,1]
+    diffCost[,3]<<-costP[,3]-costP[,1]
+    
+    diffDay[,4]<<-dayP[,4]-dayP[,1]
+    diffEx[,4]<<-exP[,1]-exP[,4]
+    diffDeath[,4]<<-deathP[,1]-deathP[,4]
+    diffQalyLoss[,4]<<-qalyLossP[,4]-qalyLossP[,1]
+    diffValOnsite[,4]<<-valOnsiteP[,4]-valOnsiteP[,1]
+    diffCost[,4]<<-costP[,4]-costP[,1]
+    
+    diffDay[,5]<<-dayP[,5]-dayP[,1]
+    diffEx[,5]<<-exP[,1]-exP[,5]
+    diffDeath[,5]<<-deathP[,1]-deathP[,5]
+    diffQalyLoss[,5]<<-qalyLossP[,5]-qalyLossP[,1]
+    diffValOnsite[,5]<<-valOnsiteP[,5]-valOnsiteP[,1]
+    diffCost[,5]<<-costP[,5]-costP[,1]
+    
+    diffDay[,6]<<-dayP[,6]-dayP[,1]
+    diffEx[,6]<<-exP[,1]-exP[,6]
+    diffDeath[,6]<<-deathP[,1]-deathP[,6]
+    diffQalyLoss[,6]<<-qalyLossP[,6]-qalyLossP[,1]
+    diffValOnsite[,6]<<-valOnsiteP[,6]-valOnsiteP[,1]
+    diffCost[,6]<<-costP[,6]-costP[,1]
+    
+    diffDay[,7]<<-dayP[,7]-dayP[,1]
+    diffEx[,7]<<-exP[,1]-exP[,7]
+    diffDeath[,7]<<-deathP[,1]-deathP[,7]
+    diffQalyLoss[,7]<<-qalyLossP[,7]-qalyLossP[,1]
+    diffValOnsite[,7]<<-valOnsiteP[,7]-valOnsiteP[,1]
+    diffCost[,7]<<-costP[,7]-costP[,1]
+    
+    tab1<<-matrix(0,nrow=14,ncol=7)
+    rownames(tab1)<<-c("Avg. no. of days campus remains open", "Avg. no. of hospitalizations", "Avg. no. of deaths", "Avg. losses of QALYs", "Avg. medical costs ($)", "Est. for value of in-person vs. online classes", "Incremental no. of days campus remains open (vs. no guidelines)",
+                       "Avg. reductions in hospitalizations (vs. no guidelines)", "Avg. reductions in deaths (vs. no guidelines)", "Avg. incremental QALYs gained (vs. no guidelines)", "Difference in medical direct & indirect costs ($) (vs. no guidelines)", 
+                       "Incremental est. for value of in-person vs. online classes ($) (vs. no guidelines)", "ICER ($/QALY) (vs. no guidelines)", "ICER ($/QALY) (vs. CDC guidelines")
+
+    tab1<<-rbind(round(colMeans(dayP), 3),
+          round(colMeans(exP), 3),
+          round(colMeans(deathP), 3),
+          round(colMeans(qalyLossP), 3),
+          formatC(round(colMeans(costP), 0), format="f", big.mark=",", digits=0),
+          #formatC(round(colMeans(valOnsiteP), 0), format="f", big.mark=",", digits=0),
+          #round(colMeans(diffDay), 3),
+          round(colMeans(diffEx), 3),
+          round(colMeans(diffDeath), 3),
+          round(colMeans(diffQalyLoss), 3),
+          formatC(round(colMeans(diffCost-diffValOnsite), 0), format="f", big.mark=",", digits=0)
+        )
+    k1<<-"Reference"
+    for (i in 2:7)
+    {
+        k01<<-(colMeans(costP-valOnsiteP)[i]-colMeans(costP-valOnsiteP)[1])/(colMeans(qalyLossP)[i]-colMeans(qalyLossP)[1])
+        if (k01<0 & (colMeans(qalyLossP)[i]-colMeans(qalyLossP)[1])>=0) 
+        {
+            k1<<-c(k1,"Dominant") 
+        } else if (k01<0 & (colMeans(qalyLossP)[i]-colMeans(qalyLossP)[1])<0)
+        {
+            k1<<-c(k1,"Dominated")
+        } else
+        {
+            k1<<-c(k1,formatC(round(((colMeans(costP-valOnsiteP)[i]-colMeans(costP-valOnsiteP)[1])/(colMeans(qalyLossP)[i]-colMeans(qalyLossP)[1])),0), format="f", big.mark=",", digits=0))
+        }
+    }
+    
+    k2<<-c(NA,"Reference")
+    for (i in 3:7)
+    {
+        k02<<-(colMeans(costP-valOnsiteP)[i]-colMeans(costP-valOnsiteP)[2])/(colMeans(qalyLossP)[i]-colMeans(qalyLossP)[2])
+        if (colMeans(qalyLossP)[i]==colMeans(qalyLossP)[2])
+        {
+            k2<<-c(k2,"Both effects and costs are equal") 
+            
+        } else if (k02<0 & (colMeans(qalyLossP)[i]-colMeans(qalyLossP)[2])>=0) 
+        {
+            k2<<-c(k2,"Dominant") 
+        } else if (k02<0 & (colMeans(qalyLossP)[i]-colMeans(qalyLossP)[2])<0)
+        {
+            k2<<-c(k2,"Dominated")
+        } else
+        {
+            k2<<-c(k2,formatC(round(((colMeans(costP-valOnsiteP)[i]-colMeans(costP-valOnsiteP)[2])/(colMeans(qalyLossP)[i]-colMeans(qalyLossP)[2])),0), format="f", big.mark=",", digits=0))
+        }
+    }
+
+    tab1<<-rbind(tab1,k1,k2)
+    rownames(tab1)<<-c("Days campus remains open", "Hospitalizations", "Deaths", "QALYs lost", "Medical and intervention costs ($)",
+                       "Mean reduction in hospitalizations (vs. do nothing)", "Mean reduction in deaths (vs. do nothing)", "Incremental QALYs gained (vs. do nothing)", 
+                       "Incremental direct & indirect costs (vs. do nothing)", "ICER ($/QALY) (vs. do nothing)", "ICER ($/QALY) (vs. CDC guidelines)")
+    colnames(tab1)<<-c("No guidelines", "CDC guidelines", "Mobile symptom checking application", "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection", "Hypothetical user-defiend intervention")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ui <- fluidPage(
+
+    # Application title
+    titlePanel("Cost-effectiveness of Strategies to Re-Open Universities in the Fall of 2020: a case-study for Columbia University in the City of New York"),
+
+    sidebarLayout(
+        sidebarPanel(
+            helpText("In this model, we explore the cost-effectiveness of different infection control strategies to re-open Columbia University in the Fall of 2020. The model contains a number of user-specified inputs that are intended to allow the model to be used by other universities, schools, and businesses. This will also allow the data that populates the model to be updated as new information about Covid-19 becomes available."),
+            br(),
+            
+            tabsetPanel(id = "tab",       
+                        tabPanel("Contact information", 
+                                 list( 
+                                        sliderInput("Ns0",
+                                                    "Number of students attending in-person classes in Fall 2020",
+                                                    min = 1, 
+                                                    max = 50000,
+                                                    value = 16000),
+                                        sliderInput("Ne0",
+                                                    "Number of staff coming to campus in Fall 2020",
+                                                    min = 1, 
+                                                    max = 50000,
+                                                    value = 4500), 
+                                        sliderInput("css0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) that each student has with another students on campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 2),
+                                        sliderInput("cse0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) that each student has with staff/faculty on campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 0),    
+                                        sliderInput("ces0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) that each staff/faculty member has with students on campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 1),  
+                                        sliderInput("cee0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) that each staff/faculty has with another staff/faculty member on campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 1),             
+                                        sliderInput("cso0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) for each student outside of campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 3),                 
+                                        sliderInput("ceo0",
+                                                    "Average number of close contacts (within 6 feet for >10 mins) for each staff/faculty outside of campus per day",
+                                                    min = 0, 
+                                                    max = 10,
+                                                    value = 2)    
+                                    )
+                                ),
+                        
+                        tabPanel("Community characteristics", 
+                                 list( 
+                                     sliderInput("pc0",
+                                                 "Estimate for number of infectious people in the community outside of campus (# per 100,000)",
+                                                 min = 0, 
+                                                 max = 2000,
+                                                 value = 131),
+                                     sliderInput("complianceO0",
+                                                 "Proportion of people within the community wearing face masks regularly when indoors or in crowds outdoors",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.78)
+                                    ) 
+
+                                ), 
+                        
+                        
+                        tabPanel("University characteristics", 
+                                 list( 
+                                     sliderInput("complianceSympS0",
+                                                 "Compliance of students/staff to self-quarantine for 14 days as soon as they notice symptoms for Covid-19",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.85),
+                                     sliderInput("value0",
+                                                 "Average tuition for one student over the entire Fall 2020 semester",
+                                                 min = 0, 
+                                                 max = 100000,
+                                                 value = 8000),
+                                     sliderInput("thresh0",
+                                                 "The threshold value for cumulative number of student/staff before campus closure",
+                                                 min = 0, 
+                                                 max = 20000,
+                                                 value = 500)
+                                 ) 
+                                 
+                        ), 
+                        
+                        tabPanel("Likelihood of super-spreader event", 
+                                 list( 
+                                     sliderInput("nParty0",
+                                                 "Daily probability of having a community party in which 10 or more students will attend",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.1),
+                                     sliderInput("sParty0",
+                                                 "Average number of community members who will attend each community party",
+                                                 min = 0, 
+                                                 max = 100,
+                                                 value = 5)
+                                 ) 
+                        ), 
+                        
+                        tabPanel("Interventions", 
+                                 list( 
+                                     sliderInput("n_mask0",
+                                                 "Number of enhanced masks provided to each student/staff over the entire Fall semester",
+                                                 min = 0, 
+                                                 max = 90,
+                                                 value = 2),
+                                     sliderInput("c_mask0",
+                                                 "Cost of each enhanced mask",
+                                                 min = 0, 
+                                                 max = 100,
+                                                 value = 4),
+                                     sliderInput("e_mask0",
+                                                 "Efficacy of enhanced mask, enter odds ratio of infection associated with your enhanced mask relative to no intervention (default value is efficacy of N95 masks)",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.2),
+                                     sliderInput("PCRSens0",
+                                                 "Sensitivity of PCR testing",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.95),
+                                     sliderInput("PCRSpec0",
+                                                 "Specificity of PCR testing",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.95),
+                                     sliderInput("c_PCR0",
+                                                 "Unit cost of PCR testing ($/test)",
+                                                 min = 0, 
+                                                 max = 200,
+                                                 value = 31),
+                                     sliderInput("e_hyp0",
+                                                 "If you have a specific intervention to test, enter the odds ratio, for infection reduction, assoiated with your intervention relative to no intervention (odds ratio of 1 means no effect and that of 0 means reducing infection transmission to 0)",
+                                                 min = 0, 
+                                                 max = 1,
+                                                 value = 0.2),
+                                     sliderInput("c_hyp0",
+                                                 "If you have a specific intervention to test, please provide the total investment cost of your intervention over the entire Fall 2020 semester (for fixed cost interventions, please depreciate the cost)",
+                                                 min = 0, 
+                                                 max = 10000000,
+                                                 value = 3000000)
+                                 ) 
+                        )
+        )
+        
+        ),    
+
+        mainPanel(
+            br(),
+            br(),
+            br(),
+            paste("Table 1. Health and economic outcomes of interventions for re-opening university campuses in the Fall of 2020. The interventions are listed in the columns. Enhanced masks, thermal imaging, gateway testing (testing all students before school begins), and the hypothetical user-defined intervention are compared with CDC guidelines and symptom checking applications unless otherwise specified. Row values show outcome measures related to each intervention. The days the campus remains open refers to the average number of days that the campus can remain open over a 90 day semester before contact tracers are overwhelmed, and the campus must close (either 50 cumulative cases or 5 cases from a super-spreader event). Hospitalizations refers to the total number of hospitalizations that would be expected to occur over the 90 day semester. Deaths refers to the total number of deaths expected to occur over the 90 day semester. QALYs lost refers to the total number of quality-adjusted life years lost over a 90 day semester. Medical costs refers to the total direct and indirect medical costs accrued over the semester. ICER refers to the incremental cost-effectiveness ratio or the difference in costs divided by the difference in QALYs"),
+            tableOutput("out_tab"),
+            br(),
+            br(),
+            paste("Figure 1. Multi-way sensitivity analysis of the interventions we study to re-open university campuses in the Fall of 2020. Each intervention is represented with a unique color. The figure shows the dominant intervention across variation in the number of infectious people in the community, the willingness-to-pay for a quality-adjusted life year, and the average number of people wearing face masks regularly inside or in crowded outdoor areas"),
+            plotOutput("out_fig")
+        )
+    )
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+server <- function(input, output) {
+
+    output$out_tab <- renderTable({
+        
+        #*********************************************************************************
+        #**********************************Sample parameters***********************************
+        #*********************************************************************************
+        
+        #**********************************Contact information per day***********************************
+        Ns<<-input$Ns0 #Number of students attending in-person classes in fall 2020
+        dormProp<<-0.37 #Proportion of Ns that live in dormitory
+        Ne<<-input$Ne0 #Number of staff (employees) go to campus in fall 2020
+        css0<<-input$css0 #Average number of close contacts does a student have with another student per day
+        cse0<<-input$cse0 #Average number of close contacts does a student have with a staff per day
+        cso0<<-input$cso0 #Average number of close contacts does a student have outside of the campus per day
+        ces0<<-input$ces0 #Average number of close contacts does a staff have with a student per day
+        cee0<<-input$cee0 #Average number of close contacts does a staff have with another staff per day
+        ceo0<<-input$ceo0 #Average number of close contacts does a staff have outside of the campus per day
+        
+        #********************Prevalence info********************************************************
+        pc<<-input$pc0/100000 #Active prevalence of covid-19 in NYC per day per 100,000 people (active prevalence is the prevalence of infected individuals that can infect other people)" 
+        infInit_s<<-input$pc0/100000*input$Ns0 #Initial number of infected students (able to infect other students or staff) on day 1 in fall 2020
+        infInit_e<<-input$pc0/100000*input$Ne0 # Initial number of infected employees (able to infect other students or staff) on day 1 in fall 2020
+        
+        pmaj<<-(input$nParty0)*(1-(1-0.1*input$pc0/100000)^input$sParty0) #Daily probability of a major outbreak (in the model, a major outbreak infects 20 students and leads to the campus closure next day)" 
+        tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) #Transition probabilities for campus open
+        tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) #Transition probabilities for major event
+        
+        
+        complianceO<<-input$complianceO0 #Compliance of waering masks outside
+        complianceSympS0<<-input$complianceSympS0 #Compliance of students with self-diagnosed symptom-based home quarantine for 14 days 
+        e_rd_o<<-0.67
+        thresh0<<-input$thresh0
+        
+        #********************Intervention info***********************
+        c_no<<-0 #Costs of no guidelines
+        c_adh<<-(((39517+16833+33600+55860)/3659)*Ns)/2 #Total costs of adhering to cleaning protocols
+        c_cust<<-((448000/3659)*Ns)/2 #Total costs of custodial staff
+        c_ppe<<-(1440/3659)*Ns/2+(44415/329)*(Ns+Ne)/2 #Total cost of PPE
+        c_cdc<<-c_adh+c_cust+c_ppe #Total costs for 90 days for cdc guidelines
+        c_cdcApp<<-c_cdc #Total costs for 90 days for cdc guidelines plus mobile app
+        c_cdcAppN95<<-c_cdc+(Ns+Ne)*input$n_mask0*input$c_mask0 #Assumign cost of N95 is two times larger than reg disposable masks
+        c_cdcAppTherm<<-c_adh+c_cust+c_ppe+485000 #Total costs, for 90 days, of cdc+app+thermal imaging 
+        c_PCR<<-input$c_PCR0 #Per test cost of PCR
+        
+        e_no<<-(1-complianceO*0.67) #aOR of no guidelines
+        e_cdc<<-0.45*0.33 #Total costs for 90 days for cdc guidelines
+        e_cdcApp<<-0.45*0.33 #aOR for infection cdc+app 
+        e_cdcAppN95<<-0.45*input$e_mask0 #aOR for infection cdc+app+N95
+        e_cdcAppTherm<<-0.45*0.33 #aOR for infection cdc+app+Thermal imaging
+        PCRF<<-11 #Frequency of test use (in the basecase we have 1 test per student/staff per week)
+        PCRSens<<-input$PCRSens0 #Sensitivity of the test
+        PCRSpec<<-input$PCRSpec0 #Specificity of the test
+        
+        
+        
+        #*********************************************************************************
+        #**********************************Global variables*******************************
+        #*********************************************************************************
+        is1<<-floor(0.06*Ns) #Initial number of immune (meaning they never become infected in the model) students in fall 2020
+        ie<<-floor(0.06*Ne) #Initial number of immune (meaning they never become infected in the model) staff in fall 2020
+        
+        tc<<-0.066 #Average transmission rate per one regular close contact with an active infected individual in the community outside of the campus
+        ts0<<-0.066 #Average transmission rate per one regular close contact with an active infected individual in the community outside of the campus
+        #REF: https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30287-5/fulltext
+        
+        totTime<<-5 #total time from exposure to onset of symptoms
+        rs<<-2 #Average number of days from infectiousness to the onset of symptoms for symptomatic cases
+        ri<<-3  #Average number of days from expsure to infectiousness
+        #REF:https://www.who.int/docs/default-source/coronaviruse/situation-reports/20200402-sitrep-73-covid-19.pdf?sfvrsn=5ae25bc7_2#:~:text=The%20incubation%20period%20for%20COVID,occur%20before%20symptom%20onset.
+        ra<<-9 #Average number of days being infectious for asymptomatic cases
+        
+        ls1<<-1-0.47 #Proprotion of infected cased being symptomatic among youngsters
+        tr_asymp<<-1 #(previously was 55%)
+        
+        n_major<<-5 #Number of people infected in a major outbreak
+        
+        pHospE<<-0.018 #Probability of hospitalizations conditional on covid-19 infection for employees
+        pHospS<<-0.008 #Probability of hospitalizations conditional on covid-19 infection for students
+        pDeadE<<-0.0015 #Probability of death conditional on covid-19 infection for employees
+        pDeadS<<-0.0002 #Probability of death conditional on covid-19 infection for students
+        
+        cDirHosp<<-23489 #Direct costs of hospitalizations for one hospitalized covid-19 patient
+        cIndirHosp<<-(21*8*25) #Indirect costs of hospitalizations for one hospitalized covid-19 patient
+        cFuneral<<-10000 #Funeral costs for one dead covid-19 patient
+        cIndirDeadE<<-(65-46)*50000 #Indirect costs of death for one dead covid-19 employee (avg US)
+        cIndirDeadS<<-(65-26)*50000 #Indirect costs of death for one dead covid-19 student (avg US)
+        cMed<<-0 #Medication costs for one covid-19 patient
+        cIndir<<-(14*8*25) #Indirect costs for one covid-19 patient that did not end up in hospital nor died
+        
+        rr_online<<-0.48 #Relative value of online vs. in-person teaching
+        value<<-(1/90)*(input$value0*(1-rr_online)) #Monetary value, from students' perspectives, for one day in-person vs. online teaching for one student  
+        valueStaff<<-18*25
+        
+        qLossCovidE<<--0.14#Losses of QALYs for one covid-19 employee (the value indicates a QALYs drop over 14 days)
+        qLossCovidS<<--0.09#Losses of QALYs for one covid-19 student (the value indicates a QALYs drop over 14 days)
+        qLossHosp<<--0.6 #Losses of QALYs for one covid-19 student that ended up in hospital (the value indicates a QALYs drop over 14 days)
+        qLossDeadE<<--(80-46)*0.85 #Lifetime losses of QALYs for one covid-19 employee that died 
+        qLossDeadS<<--(80-26)*0.85 #Lifetime losses of QALYs for one covid-19 student that died 
+        
+        
+        #********************************************************************************************************
+        #********************IAdditional information dedicated only to the Web applciation***********************
+        #********************************************************************************************************
+        e_hyp<<-input$e_hyp0 #Effect (in odds ratio vs. no intervention) of hypothetical intervention
+        c_hyp<<-input$c_hyp0 #Cost (for the whole campus during the fall 2020 semester) of hypothetical intervention
+        
+        runOutput(n=1, pcFactor=1)
+        return(tab1)
+        
+    },rownames = TRUE) #end out_tab
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    output$out_fig <- renderPlot({
+        
+        #*********************************************************************************
+        #**********************************Sample parameters***********************************
+        #*********************************************************************************
+        
+        #**********************************Contact information per day***********************************
+        Ns<<-input$Ns0 #Number of students attending in-person classes in fall 2020
+        dormProp<<-0.37 #Proportion of Ns that live in dormitory
+        Ne<<-input$Ne0 #Number of staff (employees) go to campus in fall 2020
+        css0<<-input$css0 #Average number of close contacts does a student have with another student per day
+        cse0<<-input$cse0 #Average number of close contacts does a student have with a staff per day
+        cso0<<-input$cso0 #Average number of close contacts does a student have outside of the campus per day
+        ces0<<-input$ces0 #Average number of close contacts does a staff have with a student per day
+        cee0<<-input$cee0 #Average number of close contacts does a staff have with another staff per day
+        ceo0<<-input$ceo0 #Average number of close contacts does a staff have outside of the campus per day
+        
+        #********************Prevalence info********************************************************
+        pc<<-input$pc0/100000 #Active prevalence of covid-19 in NYC per day per 100,000 people (active prevalence is the prevalence of infected individuals that can infect other people)" 
+        infInit_s<<-input$pc0/100000*input$Ns0 #Initial number of infected students (able to infect other students or staff) on day 1 in fall 2020
+        infInit_e<<-input$pc0/100000*input$Ne0 # Initial number of infected employees (able to infect other students or staff) on day 1 in fall 2020
+        
+        pmaj<<-(input$nParty0)*(1-(1-0.1*input$pc0/100000)^input$sParty0) #Daily probability of a major outbreak (in the model, a major outbreak infects 20 students and leads to the campus closure next day)" 
+        tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) #Transition probabilities for campus open
+        tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) #Transition probabilities for major event
+        
+        
+        complianceO<<-input$complianceO0 #Compliance of waering masks outside
+        complianceSympS0<<-input$complianceSympS0 #Compliance of students with self-diagnosed symptom-based home quarantine for 14 days 
+        e_rd_o<<-0.67
+        thresh0<<-input$thresh0
+        
+        #********************Intervention info***********************
+        c_no<<-0 #Costs of no guidelines
+        c_adh<<-(((39517+16833+33600+55860)/3659)*Ns)/2 #Total costs of adhering to cleaning protocols
+        c_cust<<-((448000/3659)*Ns)/2 #Total costs of custodial staff
+        c_ppe<<-(1440/3659)*Ns/2+(44415/329)*(Ns+Ne)/2 #Total cost of PPE
+        c_cdc<<-c_adh+c_cust+c_ppe #Total costs for 90 days for cdc guidelines
+        c_cdcApp<<-c_cdc #Total costs for 90 days for cdc guidelines plus mobile app
+        c_cdcAppN95<<-c_cdc+(Ns+Ne)*input$n_mask0*input$c_mask0 #Assumign cost of N95 is two times larger than reg disposable masks
+        c_cdcAppTherm<<-c_adh+c_cust+c_ppe+485000 #Total costs, for 90 days, of cdc+app+thermal imaging 
+        c_PCR<<-input$c_PCR0 #Per test cost of PCR
+        
+        e_no<<-(1-complianceO*0.67) #aOR of no guidelines
+        e_cdc<<-0.45*0.33 #Total costs for 90 days for cdc guidelines
+        e_cdcApp<<-0.45*0.33 #aOR for infection cdc+app 
+        e_cdcAppN95<<-0.45*input$e_mask0 #aOR for infection cdc+app+N95
+        e_cdcAppTherm<<-0.45*0.33 #aOR for infection cdc+app+Thermal imaging
+        PCRF<<-11 #Frequency of test use (in the basecase we have 1 test per student/staff per week)
+        PCRSens<<-input$PCRSens0 #Sensitivity of the test
+        PCRSpec<<-input$PCRSpec0 #Specificity of the test
+        
+        
+        #*********************************************************************************
+        #**********************************Global variables*******************************
+        #*********************************************************************************
+        is1<<-floor(0.06*Ns) #Initial number of immune (meaning they never become infected in the model) students in fall 2020
+        ie<<-floor(0.06*Ne) #Initial number of immune (meaning they never become infected in the model) staff in fall 2020
+        
+        tc<<-0.066 #Average transmission rate per one regular close contact with an active infected individual in the community outside of the campus
+        ts0<<-0.066 #Average transmission rate per one regular close contact with an active infected individual in the community outside of the campus
+        #REF: https://www.thelancet.com/journals/laninf/article/PIIS1473-3099(20)30287-5/fulltext
+        
+        totTime<<-5 #total time from exposure to onset of symptoms
+        rs<<-2 #Average number of days from infectiousness to the onset of symptoms for symptomatic cases
+        ri<<-3  #Average number of days from expsure to infectiousness
+        #REF:https://www.who.int/docs/default-source/coronaviruse/situation-reports/20200402-sitrep-73-covid-19.pdf?sfvrsn=5ae25bc7_2#:~:text=The%20incubation%20period%20for%20COVID,occur%20before%20symptom%20onset.
+        ra<<-9 #Average number of days being infectious for asymptomatic cases
+        
+        ls1<<-1-0.47 #Proprotion of infected cased being symptomatic among youngsters
+        tr_asymp<<-1 #(previously was 55%)
+        
+        n_major<<-5 #Number of people infected in a major outbreak
+        
+        pHospE<<-0.018 #Probability of hospitalizations conditional on covid-19 infection for employees
+        pHospS<<-0.008 #Probability of hospitalizations conditional on covid-19 infection for students
+        pDeadE<<-0.0015 #Probability of death conditional on covid-19 infection for employees
+        pDeadS<<-0.0002 #Probability of death conditional on covid-19 infection for students
+        
+        cDirHosp<<-23489 #Direct costs of hospitalizations for one hospitalized covid-19 patient
+        cIndirHosp<<-(21*8*25) #Indirect costs of hospitalizations for one hospitalized covid-19 patient
+        cFuneral<<-10000 #Funeral costs for one dead covid-19 patient
+        cIndirDeadE<<-(65-46)*50000 #Indirect costs of death for one dead covid-19 employee (avg US)
+        cIndirDeadS<<-(65-26)*50000 #Indirect costs of death for one dead covid-19 student (avg US)
+        cMed<<-0 #Medication costs for one covid-19 patient
+        cIndir<<-(14*8*25) #Indirect costs for one covid-19 patient that did not end up in hospital nor died
+        
+        rr_online<<-0.48 #Relative value of online vs. in-person teaching
+        value<<-(1/90)*(input$value0*(1-rr_online)) #Monetary value, from students' perspectives, for one day in-person vs. online teaching for one student  
+        valueStaff<<-18*25
+        
+        qLossCovidE<<--0.14#Losses of QALYs for one covid-19 employee (the value indicates a QALYs drop over 14 days)
+        qLossCovidS<<--0.09#Losses of QALYs for one covid-19 student (the value indicates a QALYs drop over 14 days)
+        qLossHosp<<--0.6 #Losses of QALYs for one covid-19 student that ended up in hospital (the value indicates a QALYs drop over 14 days)
+        qLossDeadE<<--(80-46)*0.85 #Lifetime losses of QALYs for one covid-19 employee that died 
+        qLossDeadS<<--(80-26)*0.85 #Lifetime losses of QALYs for one covid-19 student that died 
+        
+        
+        #********************************************************************************************************
+        #********************Additional information dedicated only to the Web applciation***********************
+        #********************************************************************************************************
+        e_hyp<<-input$e_hyp0 #Effect (in odds ratio vs. no intervention) of hypothetical intervention
+        c_hyp<<-input$c_hyp0 #Cost (for the whole campus during the fall 2020 semester) of hypothetical intervention
+        
+        
+        #************************************Part A of Figure********************************************************
+        bestInt<<-NA
+        complianceO<<-0.25
+        e_no<<-(1-complianceO*0.67)
+        for (i in 1:5)
+        {
+            pc<<-(500*i)/100000
+            infInit_s<<-pc*input$Ns0 #Initial number of infected students (able to infect other students or staff) on day 1 in fall 2020
+            infInit_e<<-pc*input$Ne0 # Initial number of infected employees (able to infect other students or staff) on day 1 in fall 2020
+            pmaj<<-(input$nParty0)*(1-(1-0.1*pc)^input$sParty0) 
+            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) #Transition probabilities for campus open
+            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)
+            
+            runOutput(n=1, pcFactor=1)
+            for (j in 1:5)
+            {
+                wtp<<-200000*(10^(j-1))
+                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)
+                bestInt<<-c(bestInt, which.max(NMB[-1]))
+            }
+        }
+        xx1 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")
+        yy1 <<- c("500","1000","1500","2000", "2500")
+        data1 <<- expand.grid(Y=xx1, X=yy1)
+        data1$zz1 <<- bestInt[-1]
+        # Heatmap 
+        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")
+        g1<<-ggplot(data1, aes(X,Y))+ 
+            geom_tile(aes(fill=factor(data1$zz1))) +
+            #setting the color
+            scale_fill_manual(
+                name="Interventions",
+                values=col1,
+                breaks=c("1","2","3","4", "5", "6"),
+                labels=c("CDC guidelines","Mobile symptom checking application",
+                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",
+                         "Hypothetical user-defiend intervention"))+
+            labs(title="Community compliance with wearing regular face mask of 25%", x="Community active infectious case rate (per 100,000)", y= "Willingness-to-pay")+
+            theme_classic()
+            
+        
+        #************************************Part B of Figure********************************************************
+        bestInt<<-NA
+        complianceO<<-0.5
+        e_no<<-(1-complianceO*0.67)
+        for (i in 1:5)
+        {
+            pc<<-(500*i)/100000
+            infInit_s<<-pc*input$Ns0 
+            infInit_e<<-pc*input$Ne0 
+            pmaj<<-(input$nParty0)*(1-(1-0.1*pc)^input$sParty0) 
+            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) 
+            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)
+            
+            runOutput(n=1, pcFactor=1)
+            for (j in 1:5)
+            {
+                wtp<<-200000*(10^(j-1))
+                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)
+                bestInt<<-c(bestInt, which.max(NMB[-1]))
+            }
+        }
+        xx2 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")
+        yy2 <<- c("500","1000","1500","2000", "2500")
+        data2 <<- expand.grid(Y=xx2, X=yy2)
+        data2$zz2 <<- bestInt[-1]
+        # Heatmap 
+        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")
+        g2<<-ggplot(data2, aes(X,Y))+ 
+            geom_tile(aes(fill=factor(data2$zz2))) +
+            #setting the color
+            scale_fill_manual(
+                name="Interventions",
+                values=col1,
+                breaks=c("1","2","3","4", "5", "6"),
+                labels=c("CDC guidelines","Mobile symptom checking application",
+                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",
+                         "Hypothetical user-defiend intervention"))+
+            labs(title="Community compliance with wearing regular face mask of 50%", x="Community active infectious case rate (per 100,000)", y= "Willingness-to-pay")+
+            theme_classic()
+        
+        
+        #************************************Part C of Figure********************************************************
+        bestInt<<-NA
+        complianceO<<-0.75
+        e_no<<-(1-complianceO*0.67)
+        for (i in 1:5)
+        {
+            pc<<-(500*i)/100000
+            infInit_s<<-pc*input$Ns0 
+            infInit_e<<-pc*input$Ne0  
+            pmaj<<-(input$nParty0)*(1-(1-0.1*pc)^input$sParty0) 
+            tp0<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T) 
+            tpMaj<<-matrix(c((1-pmaj), pmaj,0,1), nrow=2, ncol=2, byrow=T)
+            
+            runOutput(n=1, pcFactor=1)
+            for (j in 1:5)
+            {
+                wtp<<-200000*(10^(j-1))
+                NMB<<-wtp*colMeans(qalyLossP)+colMeans(valOnsiteP)-colMeans(costP)
+                bestInt<<-c(bestInt, which.max(NMB[-1]))
+            }
+        }
+        xx3 <<- c("$200 thousand/QALY","$2 million/QALY","$20 million/QALY","$200 million/QALY","$2 billion/QALY")
+        yy3 <<- c("500","1000","1500","2000", "2500")
+        data3 <<- expand.grid(Y=xx3, X=yy3)
+        data3$zz3 <<- bestInt[-1]
+        # Heatmap 
+        col1<<-c("lightblue", "orange","green","yellow", "purple", "red")
+        g3<<-ggplot(data3, aes(X,Y))+ 
+            geom_tile(aes(fill=factor(data3$zz3))) +
+            #setting the color
+            scale_fill_manual(
+                name="Interventions",
+                values=col1,
+                breaks=c("1","2","3","4", "5", "6"),
+                labels=c("CDC guidelines","Mobile symptom checking application",
+                         "Enhanced masks", "Thermal imaging", "Gateway testing for acute infection",
+                         "Hypothetical user-defiend intervention"))+
+            labs(title="Community compliance with wearing regular face mask of 75%", x="Community active infectious case rate (per 100,000)", y= "Willingness-to-pay")+
+            theme_classic()
+        
+            g4<<-ggarrange(g1, g2 , g3, 
+                  labels = c("A", "B", "C"),
+                  ncol = 1, nrow = 3)
+            plot(g4)
+
+    }) 
+}
+
+
+
+
+
+
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
